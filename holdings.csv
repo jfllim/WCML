@@ -1,0 +1,22 @@
+# WILBUR'S PORTFOLIO — HOLDINGS
+#
+# Add one line per holding, in the order of the columns below.
+# Lines starting with # are notes and are ignored.
+#
+#   ticker    the market symbol. London ends in .L (TSCO.L), US is plain (AZO),
+#             Amsterdam .AS, Frankfurt .DE, Paris .PA, Zurich .SW
+#   name      whatever you want it called on the page
+#   bought    purchase date as YYYY-MM-DD
+#   price     price paid per share, in that market's own currency
+#             (pounds for London, dollars for the US) — leave blank to use
+#             the closing price on the purchase date
+#   spend     the amount in pounds you put in; the share count is worked out
+#             for you. Leave blank if you enter a share count instead.
+#   shares    number of shares, if you prefer to state it. Leave blank if
+#             you filled in "spend".
+#
+# Keep the comma between every column, even where a column is empty.
+
+ticker,name,bought,price,spend,shares
+TSCO.L,Tesco,2026-01-06,4.347826087,100,
+AZO,AutoZone,2026-09-21,2803.25,100,

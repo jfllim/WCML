@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wilbur's Portfolio</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--color-bg); }
+  a { color: var(--color-accent-700); text-decoration: none; border-bottom: 1px solid var(--color-accent-300); }
+  a:hover { color: var(--color-accent-800); border-bottom-color: var(--color-accent-700); }
+  .wrap { font-family: var(--font-body); color: var(--color-text); padding: var(--space-8); max-width: 1240px; margin: 0 auto; box-sizing: border-box; }
+  .lab { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-700); font-weight: 600; }
+  .big { font-family: var(--font-heading); font-weight: 800; font-size: 30px; margin-top: var(--space-2); letter-spacing: -0.02em; }
+  .sub { font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); border-bottom: 2px solid var(--color-divider); }
+  .cells > div { padding: var(--space-6) var(--space-4); border-left: 2px solid var(--color-divider); }
+  .cells > div:first-child { padding-left: 0; border-left: 0; }
+  .cells > div:last-child { padding-right: 0; }
+  .statusbar { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; padding: var(--space-3) 0; font-size: 12px; color: var(--color-neutral-700); border-bottom: 2px solid var(--color-divider); }
+  table.table { width: 100%; min-width: 880px; border-collapse: collapse; font-size: 14px; }
+  table.table th, table.table td { white-space: nowrap; }
+  table.table th.l, table.table td.l { text-align: left; white-space: normal; }
+  table.table th.r, table.table td.r { text-align: right; }
+  td.r { font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: var(--color-neutral-100); }
+  .tick { display: block; font-size: 12px; color: var(--color-neutral-700); letter-spacing: 0.04em; }
+  .meta { display: block; font-size: 11px; color: var(--color-neutral-700); }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-end; justify-content: space-between; padding-bottom: var(--space-4)">
+    <div>
+      <div style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-neutral-700); font-weight: 600">Portfolio · total return</div>
+      <!-- Change the portfolio name here -->
+      <h1 style="font-family: var(--font-heading); font-weight: 800; font-size: 38px; line-height: 1.05; margin: var(--space-2) 0 0; letter-spacing: -0.02em">Wilbur's Portfolio</h1>
+    </div>
+    <button class="btn btn-secondary" id="refresh">Refresh prices</button>
+  </div>
+
+  <div class="hr"></div>
+
+  <div class="cells">
+    <div><div class="lab">Market value</div><div class="big" id="t-value">—</div></div>
+    <div><div class="lab">Cost</div><div class="big" id="t-cost">—</div></div>
+    <div><div class="lab">Dividends received</div><div class="big" id="t-income">—</div><div class="sub" style="color: var(--color-neutral-700)">since purchase</div></div>
+    <div><div class="lab">Total return</div><div class="big" id="t-trpct">—</div><div class="sub" id="t-tr"></div></div>
+  </div>
+
+  <div class="statusbar"><span class="tag tag-outline" id="asof">Loading…</span><span id="status"></span></div>
+
+  <div class="scroll">
+  <table class="table">
+    <thead>
+      <tr>
+        <th class="l">Stock</th>
+        <th class="r">Shares</th>
+        <th class="r">Price paid</th>
+        <th class="r">Bought</th>
+        <th class="r">Price now</th>
+        <th class="r">Value</th>
+        <th class="r">Dividends</th>
+        <th class="r">Total return</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  </div>
+</div>
+
+<script>
+/* ---------------------------------------------------------------------------
+   Wilbur's Portfolio — everything the page needs is in this file.
+   To add or change a holding, edit holdings.csv. You do not need to touch
+   this code.
+--------------------------------------------------------------------------- */
+var BASE = 'GBP';              // reporting currency: GBP, USD or EUR
+var SYMBOLS = { GBP: '\u00a3', USD: '$', EUR: '\u20ac' };
+var SYM = SYMBOLS[BASE] || BASE + ' ';
+var DAY = 86400000;
+var CACHE_KEY = 'wilbur.portfolio.prices';
+
+/* ---- number and name helpers -------------------------------------------- */
+function num(v) { var n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : NaN; }
+function has(v) { return v != null && String(v).trim() !== ''; }
+function p2(n) { return isFinite(n) ? Math.round(n * 100) / 100 : NaN; }
+function money(n) {
+  if (!isFinite(n)) return '\u2014';
+  var s = Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (n < 0 ? '\u2212' : '') + SYM + s;
+}
+function pct(n) { return isFinite(n) ? (n > 0 ? '+' : n < 0 ? '\u2212' : '') + Math.abs(n).toFixed(2) + '%' : '\u2014'; }
+function dec(n, dp) { return isFinite(n) ? n.toFixed(dp == null ? 2 : dp) : ''; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function dateText(d) {
+  var t = Date.parse((d || '') + 'T00:00:00Z');
+  return isFinite(t) ? new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '\u2014';
+}
+var KEEP_CAPS = ['HSBC','BP','BT','GSK','SSE','ASML','SAP','IBM','AMD','BAE','RELX','ITV','EDF','AIB','ING'];
+function simpleName(raw) {
+  if (!raw) return '';
+  var s = String(raw).split(/[,(]/)[0];
+  s = s.replace(/\s+(PLC|P\.L\.C\.|ORD|ORDINARY|INC\.?|CORP\.?|CORPORATION|COMPANY|CO\.|LTD\.?|LIMITED|N\.?V\.?|S\.?A\.?|A\.?G\.?|S\.?E\.?|SPA|OYJ|AB|ASA|COMMON STOCK|CLASS [A-Z]|REG\b|REIT)\b.*$/i, '').trim();
+  return s.split(/\s+/).map(function (w) {
+    if (KEEP_CAPS.indexOf(w.toUpperCase()) !== -1) return w.toUpperCase();
+    if (w === w.toUpperCase() && w.length > 1 && /[AEIOUY]/.test(w)) return w[0] + w.slice(1).toLowerCase();
+    return w;
+  }).join(' ');
+}
+
+/* ---- holdings file ------------------------------------------------------- */
+function parseCsv(text) {
+  var out = [];
+  text.split(/\r?\n/).forEach(function (line) {
+    var t = line.trim();
+    if (!t || t.charAt(0) === '#') return;
+    var c = t.split(',').map(function (x) { return x.trim(); });
+    if (c[0].toLowerCase() === 'ticker') return;            // header row
+    if (!c[0]) return;
+    out.push({
+      ticker: c[0].toUpperCase(),
+      name: c[1] || '',
+      date: c[2] || '',
+      cost: c[3] || '',
+      spend: c[4] || '',
+      shares: c[5] || ''
+    });
+  });
+  return out;
+}
+
+/* ---- price feed ---------------------------------------------------------
+   One request per holding returns the name, currency, latest close, the close
+   on the purchase date and the dividend history. Browsers cannot call the
+   feed directly, so public relays are tried in turn, each time-boxed.
+------------------------------------------------------------------------- */
+var RELAYS = [
+  function (u) { return { url: 'https://r.jina.ai/' + u, opts: { headers: { 'x-return-format': 'text' } } }; },
+  function (u) { return { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) }; },
+  function (u) { return { url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u) }; }
+];
+function chartUrl(sym, fromMs) {
+  var p1 = Math.floor((fromMs || Date.now() - 400 * DAY) / 1000) - 5 * 86400;
+  var p2s = Math.floor(Date.now() / 1000) + 86400;
+  return 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) +
+    '?period1=' + p1 + '&period2=' + p2s + '&interval=1d&events=div&includeAdjustedClose=false';
+}
+function parseChart(j) {
+  var r = j && j.chart && j.chart.result && j.chart.result[0];
+  var m = r && r.meta;
+  if (!m) throw new Error('no data');
+  var unit = 1, ccy = m.currency || '';
+  if (ccy === 'GBp') { unit = 0.01; ccy = 'GBP'; }
+  else if (ccy === 'ILA') { unit = 0.01; ccy = 'ILS'; }
+  else if (ccy === 'ZAc') { unit = 0.01; ccy = 'ZAR'; }
+  var ts = (r.timestamp || []).map(function (t) { return t * 1000; });
+  var qd = r.indicators && r.indicators.quote && r.indicators.quote[0];
+  var closes = (qd && qd.close) || [];
+  var series = [];
+  ts.forEach(function (t, i) { if (isFinite(closes[i])) series.push([t, closes[i] * unit]); });
+  var dv = (r.events && r.events.dividends) || {};
+  var divs = Object.keys(dv).map(function (k) { return { t: dv[k].date * 1000, amt: dv[k].amount * unit }; })
+    .filter(function (d) { return isFinite(d.amt); }).sort(function (a, b) { return a.t - b.t; });
+  var last = isFinite(m.regularMarketPrice) ? m.regularMarketPrice * unit : (series.length ? series[series.length - 1][1] : NaN);
+  if (!isFinite(last)) throw new Error('no price');
+  return {
+    px: last, ccy: ccy, name: m.shortName || m.longName || '', series: series, divs: divs,
+    t: (m.regularMarketTime || 0) * 1000 || (series.length ? series[series.length - 1][0] : Date.now()),
+    fetched: Date.now()
+  };
+}
+function getJson(target, ms) {
+  var ctl = new AbortController();
+  var timer = setTimeout(function () { ctl.abort(); }, ms || 9000);
+  var opts = Object.assign({ signal: ctl.signal }, target.opts || {});
+  return fetch(target.url, opts).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.text();
+  }).then(function (txt) {
+    clearTimeout(timer);
+    var i = txt.indexOf('{');
+    if (i === -1) throw new Error('not JSON');
+    return JSON.parse(txt.slice(i));
+  }, function (e) { clearTimeout(timer); throw e; });
+}
+async function fetchChart(sym, fromMs) {
+  var url = chartUrl(sym, fromMs);
+  var attempts = [['Yahoo', { url: url }, 4000]];
+  RELAYS.forEach(function (f, i) { attempts.push(['Yahoo (relay ' + (i + 1) + ')', f(url), 9000]); });
+  var err = 'no source reachable';
+  for (var i = 0; i < attempts.length; i++) {
+    try {
+      var q = parseChart(await getJson(attempts[i][1], attempts[i][2]));
+      q.source = attempts[i][0];
+      return q;
+    } catch (e) { err = (e && e.message) || String(e); }
+  }
+  throw new Error(err);
+}
+
+/* ---- state -------------------------------------------------------------- */
+var holdings = [];
+var quotes = {};
+try { quotes = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}') || {}; } catch (e) { quotes = {}; }
+
+function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify(quotes)); } catch (e) {} }
+function setStatus(s) { document.getElementById('status').textContent = s; }
+
+function closeOn(quote, dateStr) {
+  if (!quote || !quote.series || !quote.series.length) return NaN;
+  var t = Date.parse((dateStr || '') + 'T00:00:00Z');
+  if (!isFinite(t)) return NaN;
+  for (var i = 0; i < quote.series.length; i++) if (quote.series[i][0] >= t - DAY) return quote.series[i][1];
+  return NaN;
+}
+function fxFor(ccy, dateStr) {
+  if (!ccy || ccy === BASE) return 1;
+  var f = quotes['FX:' + ccy + BASE];
+  if (!f || !isFinite(f.px)) return NaN;
+  if (dateStr) { var then = closeOn(f, dateStr); if (isFinite(then)) return then; }
+  return f.px;
+}
+
+async function refresh(force) {
+  var wanted = [];
+  holdings.forEach(function (h) {
+    if (!h.ticker) return;
+    var from = Date.parse((h.date || '') + 'T00:00:00Z');
+    if (!isFinite(from)) from = Date.now() - 400 * DAY;
+    var prev = wanted.filter(function (w) { return w.sym === h.ticker; })[0];
+    if (prev) prev.from = Math.min(prev.from, from); else wanted.push({ sym: h.ticker, from: from });
+  });
+  if (!wanted.length) { setStatus('No holdings listed in holdings.csv yet.'); return; }
+
+  var stale = Date.now() - 6 * 3600000;
+  var need = wanted.filter(function (w) {
+    var q = quotes[w.sym];
+    return force || !q || (q.fetched || 0) < stale || (q.from || Infinity) > w.from + DAY;
+  });
+  var failed = [];
+  if (need.length) {
+    setStatus('Fetching ' + need.length + ' quote' + (need.length > 1 ? 's' : '') + '\u2026');
+    await Promise.all(need.map(async function (w) {
+      try { var q = await fetchChart(w.sym, w.from); q.from = w.from; quotes[w.sym] = q; }
+      catch (e) { failed.push(w.sym); }
+    }));
+  }
+  var ccys = [];
+  Object.keys(quotes).forEach(function (k) {
+    if (k.indexOf('FX:') === 0) return;
+    var c = quotes[k] && quotes[k].ccy;
+    if (c && c !== BASE && ccys.indexOf(c) === -1) ccys.push(c);
+  });
+  var earliest = wanted.reduce(function (a, w) { return Math.min(a, w.from); }, Date.now());
+  await Promise.all(ccys.map(async function (c) {
+    var k = 'FX:' + c + BASE;
+    if (!force && quotes[k] && (quotes[k].fetched || 0) > stale && (quotes[k].from || Infinity) <= earliest + DAY) return;
+    try { var q = await fetchChart(c + BASE + '=X', earliest); q.from = earliest; quotes[k] = q; }
+    catch (e) { failed.push(c + '\u2192' + BASE); }
+  }));
+  saveCache();
+  var src = [];
+  Object.keys(quotes).forEach(function (k) { var s = quotes[k] && quotes[k].source; if (s && src.indexOf(s) === -1) src.push(s); });
+  setStatus((src.length ? 'Source: ' + src.join(', ') : 'No prices fetched') +
+    (failed.length ? ' \u00b7 nothing returned for ' + failed.join(', ') : ''));
+  render();
+}
+
+/* ---- render ------------------------------------------------------------- */
+var UP = 'var(--color-neutral-900)', DOWN = 'var(--color-accent-700)', MUTED = 'var(--color-neutral-600)';
+
+function render() {
+  var calc = holdings.map(function (h) {
+    var quote = quotes[h.ticker];
+    var fx = quote ? fxFor(quote.ccy) : NaN;
+    var fxThen = quote ? fxFor(quote.ccy, h.date) : NaN;
+    var pxBase = quote ? quote.px * fx : NaN;
+    var costNative = has(h.cost) ? num(h.cost) : (quote ? closeOn(quote, h.date) : NaN);
+    var costPer = costNative * fxThen;
+    var shares = has(h.shares) ? num(h.shares)
+      : (has(h.spend) && isFinite(costPer) && costPer ? num(h.spend) / costPer : NaN);
+    var from = Date.parse((h.date || '') + 'T00:00:00Z');
+    var divs = (quote && quote.divs) || [];
+    var paid = divs.filter(function (d) { return isFinite(from) ? d.t >= from : false; });
+    var perShare = paid.reduce(function (a, d) { return a + d.amt; }, 0);
+    var income = isFinite(fx) && paid.length ? perShare * shares * fx : (quote ? 0 : NaN);
+    var ttm = divs.filter(function (d) { return d.t >= Date.now() - 365 * DAY; })
+      .reduce(function (a, d) { return a + d.amt; }, 0) * fx;
+    return {
+      h: h, quote: quote, shares: shares, pxBase: pxBase, costPer: costPer,
+      cost: isFinite(costPer) && isFinite(shares) ? costPer * shares : NaN,
+      value: isFinite(pxBase) && isFinite(shares) ? pxBase * shares : NaN,
+      income: income, paid: paid, ttm: ttm
+    };
+  });
+
+  var live = calc.filter(function (r) { return isFinite(r.value) && isFinite(r.cost); });
+  var total = live.reduce(function (a, r) { return a + p2(r.value); }, 0);
+  var totalCost = live.reduce(function (a, r) { return a + p2(r.cost); }, 0);
+  var totalIncome = calc.reduce(function (a, r) { return a + (isFinite(r.income) ? p2(r.income) : 0); }, 0);
+  var totalTr = live.length ? p2(total - totalCost) + totalIncome : NaN;
+
+  document.getElementById('t-value').textContent = live.length ? money(total) : '\u2014';
+  document.getElementById('t-cost').textContent = live.length ? money(totalCost) : '\u2014';
+  document.getElementById('t-income').textContent = money(totalIncome);
+  var pctEl = document.getElementById('t-trpct'), trEl = document.getElementById('t-tr');
+  pctEl.textContent = isFinite(totalTr) && totalCost ? pct((totalTr / totalCost) * 100) : '\u2014';
+  trEl.textContent = isFinite(totalTr) ? money(totalTr) : '';
+  var tc = !isFinite(totalTr) ? MUTED : totalTr < 0 ? DOWN : UP;
+  pctEl.style.color = tc; trEl.style.color = tc;
+
+  var stamps = calc.filter(function (r) { return r.quote; }).map(function (r) { return r.quote.t; }).sort(function (a, b) { return b - a; });
+  document.getElementById('asof').textContent = stamps.length
+    ? 'Priced ' + new Date(stamps[0]).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+    : 'Not priced yet';
+
+  document.getElementById('rows').innerHTML = calc.map(function (r) {
+    var capital = isFinite(r.value) && isFinite(r.cost) ? p2(p2(r.value) - p2(r.cost)) : NaN;
+    var tr = isFinite(capital) ? capital + (isFinite(r.income) ? p2(r.income) : 0) : NaN;
+    var trPct = isFinite(tr) && r.cost ? (tr / r.cost) * 100 : NaN;
+    var yld = isFinite(r.ttm) && r.ttm > 0 && isFinite(r.pxBase) && r.pxBase ? (r.ttm / r.pxBase) * 100 : NaN;
+    var trColor = !isFinite(tr) ? MUTED : tr < 0 ? DOWN : UP;
+    var name = r.h.name || simpleName(r.quote && r.quote.name) || r.h.ticker;
+    var meta = r.paid.length
+      ? r.paid.length + ' pmt' + (r.paid.length > 1 ? 's' : '') + (isFinite(yld) ? ' \u00b7 ' + yld.toFixed(1) + '% yld' : '')
+      : (isFinite(yld) ? yld.toFixed(1) + '% yld' : 'none yet');
+    return '<tr>' +
+      '<td class="l"><span style="font-weight:700;letter-spacing:0.02em">' + esc(name) + '</span><span class="tick">' + esc(r.h.ticker) + '</span></td>' +
+      '<td class="r">' + (isFinite(r.shares) ? r.shares.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '\u2014') + '</td>' +
+      '<td class="r">' + (isFinite(r.costPer) ? SYM + dec(r.costPer, 2) : '\u2014') + '</td>' +
+      '<td class="r" style="color:var(--color-neutral-800)">' + dateText(r.h.date) + '</td>' +
+      '<td class="r" style="font-weight:600">' + (isFinite(r.pxBase) ? SYM + dec(r.pxBase, 2) : '\u2014') + '</td>' +
+      '<td class="r">' + money(r.value) + '</td>' +
+      '<td class="r">' + money(r.income) + '<span class="meta">' + meta + '</span></td>' +
+      '<td class="r" style="color:' + trColor + '"><span style="font-weight:700">' + pct(trPct) + '</span><span class="meta" style="color:' + trColor + '">' + money(tr) + '</span></td>' +
+      '</tr>';
+  }).join('');
+}
+
+/* ---- start -------------------------------------------------------------- */
+document.getElementById('refresh').addEventListener('click', function () {
+  this.textContent = 'Refreshing\u2026';
+  var btn = this;
+  refresh(true).then(function () { btn.textContent = 'Refresh prices'; });
+});
+
+fetch('holdings.csv?v=' + Date.now())
+  .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+  .then(function (txt) { holdings = parseCsv(txt); render(); return refresh(false); })
+  .catch(function (e) {
+    setStatus('Could not read holdings.csv (' + e.message + '). Open this page over http, not as a local file.');
+  });
+</script>
+</body>
+</html>
