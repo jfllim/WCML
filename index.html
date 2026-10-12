@@ -3,11 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wilbur's Portfolio</title>
+<title>Wilbur's Sunshine Investments</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sunshine">
+<meta name="theme-color" content="#FFB627">
 <link rel="stylesheet" href="styles.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; padding: 0; background: var(--color-bg); }
   a { color: var(--color-accent-700); text-decoration: none; border-bottom: 1px solid var(--color-accent-300); }
@@ -30,15 +36,51 @@
   .tick { display: block; font-size: 12px; color: var(--color-neutral-700); letter-spacing: 0.04em; }
   .meta { display: block; font-size: 11px; color: var(--color-neutral-700); }
   .scroll { overflow-x: auto; }
+
+  :root {
+    --color-bg: #FFF7E3; --color-surface: #FFFFFF; --color-text: #3B2A14;
+    --color-accent: #FF9F1C; --color-divider: #FFC94A;
+    --color-accent-100: #FFF3D6; --color-accent-200: #FFE6A6; --color-accent-300: #FFD66B; --color-accent-400: #FFB627;
+    --color-accent-500: #FF9F1C; --color-accent-600: #F07F0A; --color-accent-700: #A85200; --color-accent-800: #7E3D00; --color-accent-900: #552900;
+    --color-neutral-100: #FFF1CF; --color-neutral-200: #FCE4B0; --color-neutral-600: #94744B; --color-neutral-700: #6E5233; --color-neutral-800: #54401F; --color-neutral-900: #3B2A14;
+    --font-heading: "Fredoka", system-ui, sans-serif; --font-heading-weight: 600; --font-body: "Nunito", system-ui, sans-serif;
+    --radius-sm: 10px; --radius-md: 14px; --radius-lg: 20px;
+  }
+  html, body { background: #FFF7E3 radial-gradient(circle at 100% 0, #FFE08A 0, rgba(255,224,138,0) 520px) no-repeat; }
+  .hr { height: 8px; margin: var(--space-4) 0; background: radial-gradient(circle, #FFB627 3.5px, transparent 4px) left center / 22px 8px repeat-x; }
+  .btn { border-radius: 999px; font-weight: 600; transition: transform .12s, box-shadow .12s; }
+  .btn-secondary { background: #FFD23F; border: 2px solid #3B2A14; box-shadow: 3px 3px 0 #3B2A14; }
+  .btn-secondary:hover { background: #FFC21A; transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #3B2A14; }
+  .btn-secondary:active { background: #FFB627; transform: translate(2px,2px); box-shadow: 1px 1px 0 #3B2A14; }
+  .btn-ghost { color: var(--color-accent-700); }
+  .tag { border-radius: 999px; }
+  .tag-outline { background: #FFFFFF; border: 2px solid #FFB627; color: var(--color-accent-800); font-weight: 700; }
+  .table th { background: #FFE6A6; font-family: var(--font-heading); font-weight: 600; color: #3B2A14; font-size: 13px; letter-spacing: 0.02em; text-transform: none; }
+  .table td { border-color: #FFE6A6; }
+  @keyframes sun-wiggle { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+  .lab { display: flex; align-items: center; gap: 6px; font-size: 12px; letter-spacing: 0.08em; color: var(--color-neutral-800); font-weight: 800; }
+  .lab::before { content: ""; width: 18px; height: 18px; background: url(logo.svg) center / contain no-repeat; flex: none; }
+  .big { font-weight: 600; font-size: 34px; letter-spacing: -0.01em; }
+  .sub { font-weight: 700; }
+  .cells { gap: var(--space-4); border-bottom: 0; padding: var(--space-2) 6px 20px 0; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  .cells > div, .cells > div:first-child, .cells > div:last-child { background: #FFFFFF; border: 2px solid #3B2A14; border-radius: 20px; box-shadow: 4px 4px 0 #3B2A14; padding: 20px 20px var(--space-6); transition: transform .2s; }
+  .cells > div:hover { transform: rotate(-1deg) translateY(-2px); }
+  .cells > div:nth-child(1) { background: #FFE6A6; } .cells > div:nth-child(3) { background: #FFF3D6; } .cells > div:nth-child(4) { background: #FFD23F; }
+  .scroll { background: #FFFFFF; border: 2px solid #3B2A14; border-radius: 20px; box-shadow: 4px 4px 0 #3B2A14; margin: 20px 6px 6px 0; }
+  tbody tr:hover { background: #FFF3D6; }
+  .logo { transition: transform .5s cubic-bezier(.3,1.6,.5,1); }
+  .logo:hover { transform: rotate(25deg) scale(1.08); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div style="display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-end; justify-content: space-between; padding-bottom: var(--space-4)">
-    <div>
-      <div style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-neutral-700); font-weight: 600">Portfolio · total return</div>
-      <!-- Change the portfolio name here -->
-      <h1 style="font-family: var(--font-heading); font-weight: 800; font-size: 38px; line-height: 1.05; margin: var(--space-2) 0 0; letter-spacing: -0.02em">Wilbur's Portfolio</h1>
+    <div style="display: flex; gap: var(--space-4); align-items: center">
+      <img src="logo.svg" alt="" width="88" height="88" style="display: block" class="logo">
+      <div>
+        <div style="display: inline-block; transform: rotate(-4deg); background: #FFD23F; border: 2px solid #3B2A14; border-radius: 999px; padding: 1px 12px; font-family: var(--font-heading); font-weight: 600; font-size: 16px; box-shadow: 2px 2px 0 #3B2A14">Wilbur's</div>
+        <h1 style="font-family: var(--font-heading); font-weight: 600; font-size: 44px; line-height: 1.05; margin: var(--space-2) 0 0; letter-spacing: -0.01em"><span style="background: linear-gradient(transparent 60%, #FFD66B 60%); padding: 0 2px">Sunshine</span> Investments</h1>
+      </div>
     </div>
     <button class="btn btn-secondary" id="refresh">Refresh prices</button>
   </div>
@@ -272,7 +314,7 @@ async function refresh(force) {
 }
 
 /* ---- render ------------------------------------------------------------- */
-var UP = 'var(--color-neutral-900)', DOWN = 'var(--color-accent-700)', MUTED = 'var(--color-neutral-600)';
+var UP = '#1F7A3A', DOWN = '#C2361B', MUTED = 'var(--color-neutral-600)';
 
 function render() {
   var calc = holdings.map(function (h) {

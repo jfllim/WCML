@@ -53,3 +53,7 @@ Bookmark that address — it's your portfolio page.
   new fetch.
 - Opening `index.html` by double-clicking it won't work — browsers block reading
   `holdings.csv` from a local file. Use the GitHub Pages address.
+
+
+## Logo and home-screen icon
+Upload these alongside index.html: logo.svg, icon.svg, apple-touch-icon.png, icon-192.png, icon-512.png, manifest.webmanifest. On iPhone: Safari → Share → Add to Home Screen. If an old icon shows, delete the shortcut and add it again.
